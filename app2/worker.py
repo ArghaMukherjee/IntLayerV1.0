@@ -31,6 +31,17 @@ class Worker:
         self._tasks: list[asyncio.Task] = []
         self.stats: Counter = Counter()
         self.started_at: datetime | None = None
+        self.paused = False
+
+    def pause(self) -> None:
+        """Stop claiming new requests; in-flight requests still finish."""
+        self.paused = True
+        log.info("worker %s paused", self._client.worker_id)
+
+    def resume(self) -> None:
+        self.paused = False
+        self._wake.set()
+        log.info("worker %s resumed", self._client.worker_id)
 
     @property
     def running(self) -> bool:
@@ -74,7 +85,7 @@ class Worker:
     async def _run(self) -> None:
         while not self._stopping:
             self._wake.clear()
-            free = self._max_concurrency - len(self._inflight)
+            free = 0 if self.paused else self._max_concurrency - len(self._inflight)
             claimed = 0
             if free > 0:
                 try:

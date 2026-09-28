@@ -13,10 +13,10 @@ returned to App1 by **polling** or **signed callback**, and a **data warehouse**
 | `postgres` | PostgreSQL 16: `integration` schema (queue + metadata) and `dwh` schema (star model) | 5432 |
 | `migrate` | One-shot: applies `db/*.sql` in order and creates the service login users | – |
 | `integration_layer/` → `il-api` | REST API for App1, JSON Schema validation, API call logging, callback delivery | 8000 |
-| `integration_layer/` → `il-scheduler` | Lease reaper (1 min), monthly partitions (6 h), DWH incremental load (15 min) | – |
+| `integration_layer/` → `il-scheduler` | Job runner: system jobs (lease reaper, partitions, DWH load; schedules in `console.system_jobs`) and traffic jobs from the console | – |
 | `app2/` → `app2` | Claims requests, runs the workflow handler, validates output, reports the result | 8001 |
 | `app1_mock/` → `app1-mock` | Stand-in for App1: submits orders and receives callbacks; `il_client.py` is a reusable client | 8002 |
-| `ui/` → `ui` | **Operations console**: live dashboard, send test requests, request explorer (metadata, JSON, status history, API calls), callbacks, API log, workflows, DWH reports | 8080 (localhost only) |
+| `ui/` → `ui` | **Operations console** (black and red): dashboard, analytics, jobs, JSON payload library, request telemetry, system telemetry, workflow schema editor | 8080 (localhost only) |
 
 ## Run it
 
@@ -27,7 +27,20 @@ docker compose ps             # migrate should show "exited (0)", everything els
 python scripts/smoke_test.py  # end-to-end check (needs: pip install httpx)
 ```
 
-**Console: http://localhost:8080** (tabs can be linked directly, e.g. `/#requests`, `/#send`).
+**Console: http://localhost:8080** (tabs can be linked directly, e.g. `/#analytics`, `/#jobs`).
+
+| Tab | What you can do |
+|---|---|
+| Dashboard | Live health of App1 → IL → PostgreSQL → App2, 24 h KPIs, hourly volume, status mix, latest requests |
+| Analytics | Warehouse-backed charts for 1 h / 24 h / 7 d / 30 d: throughput, success rate, p95 latency trend, latency distribution, outcomes, error codes, retries, weekday × hour heatmap, per-workflow table; "Refresh warehouse now" |
+| Jobs | Pause/resume App2 consumption; create, edit, run now, pause, resume and delete **traffic jobs** (send templated JSON on a schedule, every request's HTTP status and response recorded); run, pause, resume and reschedule **system jobs** (lease reaper, partitions, DWH load) |
+| Payloads & send | JSON library: view, add, update, duplicate, delete samples; validate against the workflow schema; send and see status code, response body and live pipeline progress. Samples support placeholders such as `{{rand_int:1:40}}`, `{{choice:EUR\|USD}}`, `{{seq}}` |
+| Requests | Search and filter; the detail panel shows stage latencies, metadata, input/output JSON, every HTTP call with headers and response, and the status history |
+| Telemetry | Service health, stage latency (queue, processing, callback, end-to-end), per-endpoint latency and errors, HTTP status codes, live event stream, raw API calls and callbacks, database stats |
+| Workflows | View and edit input/output JSON Schemas (version bumps automatically), create workflows |
+
+Jobs are stored in the `console` schema (migration `005`) and executed by `il-scheduler`, which polls
+every 2 s; the console only records intent (run requested, paused, interval), so it stays stateless.
 It reads PostgreSQL with the read-only `ui_reader` user and performs actions (send, cancel, replay) through
 the Integration Layer API server-side, so API keys never reach the browser. It holds the admin key, so it is
 published on 127.0.0.1 only; put authentication in front of it before exposing it on a network.
@@ -106,7 +119,7 @@ match `output_schema` fails with `OUTPUT_SCHEMA_INVALID`.
 | `app2` | `app2_worker` | **only** `claim_requests`, `heartbeat`, `complete_request`, `fail_request` + read output schemas |
 | `il_scheduler_user` | `il_scheduler`, `dwh_etl` | reaper, partition creation, DWH load |
 | `bi_reader` | `dwh_reader` | read-only on the `dwh` schema (connect your BI tool with this) |
-| `ui_reader` | `ops_viewer` | read-only on the `integration` and `dwh` schemas (operations console) |
+| `ui_reader` | `ops_viewer`, `console_app` | read-only on `integration` and `dwh`; manages samples and jobs in `console`; may only change schedule columns of system jobs |
 
 Useful queries:
 

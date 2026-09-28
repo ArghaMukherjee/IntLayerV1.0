@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>Integration Layer Console</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M8 11h9m-3-4 4 4-4 4M24 21h-9m3 4-4-4 4-4' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23e5202e'/><path d='M8 11h9m-3-4 4 4-4 4M24 21h-9m3 4-4-4 4-4' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
@@ -14,28 +15,25 @@
         <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="7"/><path d="M8 11h9m-3-4 4 4-4 4M24 21h-9m3 4-4-4 4-4"/></svg>
       </span>
       <div>
-        <div class="brand-title">Integration Layer Console</div>
-        <div class="brand-sub">App1 &rarr; Integration Layer &rarr; PostgreSQL &rarr; App2</div>
+        <div class="brand-title">Integration Layer <b>Console</b></div>
+        <div class="brand-sub">App1 &rarr; Integration Layer &rarr; PostgreSQL &rarr; App2 &rarr; Data warehouse</div>
       </div>
     </div>
     <div class="topbar-right">
       <span class="refresh" id="refresh-state" title="Data refreshes automatically">
         <span class="pulse" aria-hidden="true"></span><span id="refresh-text">Live</span>
       </span>
-      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-      </button>
     </div>
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
-    <button role="tab" data-tab="send">Send request</button>
+    <button role="tab" data-tab="analytics">Analytics</button>
+    <button role="tab" data-tab="jobs">Jobs</button>
+    <button role="tab" data-tab="payloads">Payloads &amp; send</button>
     <button role="tab" data-tab="requests">Requests</button>
-    <button role="tab" data-tab="callbacks">Callbacks</button>
-    <button role="tab" data-tab="apilog">API log</button>
+    <button role="tab" data-tab="telemetry">Telemetry</button>
     <button role="tab" data-tab="workflows">Workflows</button>
-    <button role="tab" data-tab="reports">Reports</button>
   </nav>
 
   <main>
@@ -43,13 +41,13 @@
     <section id="tab-dashboard" class="tab-panel" role="tabpanel">
       <div class="flow" id="flow"></div>
       <div class="kpis" id="kpis"></div>
-      <div class="grid-2">
+      <div class="grid-32">
         <div class="card">
-          <div class="card-head"><h2>Requests received, last 24 hours</h2><span class="muted small">per hour</span></div>
+          <div class="card-head"><h2>Requests received, last 24 hours</h2><span class="sub">per hour, live</span></div>
           <div class="chart" id="hourly-chart"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>Requests by status</h2><span class="muted small">all time</span></div>
+          <div class="card-head"><h2>Requests by status</h2><span class="sub">all time</span></div>
           <div id="status-chart"></div>
         </div>
       </div>
@@ -59,47 +57,71 @@
       </div>
     </section>
 
-    <!-- SEND -->
-    <section id="tab-send" class="tab-panel" role="tabpanel" hidden>
-      <div class="grid-send">
-        <div class="card">
-          <div class="card-head"><h2>Send a request as App1</h2></div>
-          <p class="muted small">The console posts to the Integration Layer API server-side using App1's API key.
-            The payload is validated against the workflow's JSON Schema before it is stored.</p>
-          <form id="send-form" autocomplete="off">
-            <div class="form-row">
-              <label for="f-workflow">Workflow</label>
-              <select id="f-workflow" required></select>
-            </div>
-            <div class="form-row">
-              <span class="label">Sample payloads</span>
-              <div class="chips" id="samples"></div>
-            </div>
-            <div class="form-row">
-              <label for="f-payload">Payload (JSON)</label>
-              <textarea id="f-payload" rows="16" spellcheck="false"></textarea>
-              <div class="field-error" id="payload-error" hidden></div>
-            </div>
-            <div class="form-inline">
-              <div class="form-row grow">
-                <label for="f-idem">Idempotency key <span class="muted">(optional)</span></label>
-                <input id="f-idem" type="text" maxlength="200" placeholder="e.g. ORD-1001">
-              </div>
-              <div class="form-row">
-                <label for="f-priority">Priority</label>
-                <select id="f-priority"><option>0</option><option>1</option><option>5</option><option>9</option></select>
-              </div>
-            </div>
-            <label class="check"><input id="f-callback" type="checkbox" checked> Deliver the result to App1 by callback (polling always works)</label>
-            <div class="actions">
-              <button class="btn primary" type="submit" id="send-btn">Send request</button>
-              <button class="btn" type="button" id="format-btn">Format JSON</button>
-            </div>
-          </form>
+    <!-- ANALYTICS -->
+    <section id="tab-analytics" class="tab-panel" role="tabpanel" hidden>
+      <div class="card accent">
+        <div class="filters" style="margin:0">
+          <div class="seg" id="a-range" role="group" aria-label="Time range">
+            <button data-range="1h">1 h</button><button data-range="24h" aria-pressed="true">24 h</button>
+            <button data-range="7d">7 d</button><button data-range="30d">30 d</button>
+          </div>
+          <select id="a-workflow" aria-label="Workflow" data-workflow-filter><option value="">All workflows</option></select>
+          <span class="muted small" id="a-warehouse" style="margin-left:auto"></span>
+          <button class="btn sm" id="a-refresh-dwh" type="button">Refresh warehouse now</button>
         </div>
-        <div class="card" id="send-result-card">
-          <div class="card-head"><h2>Result</h2></div>
-          <div id="send-result"><p class="muted">Send a request to see the response and follow it through the pipeline.</p></div>
+      </div>
+      <div class="kpis" id="a-kpis"></div>
+      <div class="grid-2">
+        <div class="card"><div class="card-head"><h2>Throughput</h2><span class="sub" id="a-bucket"></span></div><div class="chart" id="a-throughput"></div></div>
+        <div class="card"><div class="card-head"><h2>Success rate</h2><span class="sub">completed / finished, per bucket</span></div><div class="chart" id="a-success"></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-head"><h2>p95 end-to-end latency</h2><span class="sub">completed requests, per bucket</span></div><div class="chart" id="a-latency-trend"></div></div>
+        <div class="card"><div class="card-head"><h2>Latency distribution</h2><span class="sub">end-to-end, completed requests</span></div><div class="chart" id="a-latency-hist"></div></div>
+      </div>
+      <div class="grid-3">
+        <div class="card"><div class="card-head"><h2>Outcomes</h2><span class="sub">workflow status</span></div><div id="a-outcomes"></div></div>
+        <div class="card"><div class="card-head"><h2>Top error codes</h2></div><div id="a-errors"></div></div>
+        <div class="card"><div class="card-head"><h2>Retries per request</h2></div><div class="chart" id="a-retries"></div></div>
+      </div>
+      <div class="card"><div class="card-head"><h2>Activity by weekday and hour</h2><span class="sub">last 7 days, your time zone</span></div><div id="a-heatmap"></div></div>
+      <div class="card"><div class="card-head"><h2>By workflow</h2></div><div id="a-by-workflow"></div></div>
+    </section>
+
+    <!-- JOBS -->
+    <section id="tab-jobs" class="tab-panel" role="tabpanel" hidden>
+      <div class="section-title"><h2>Pipeline control</h2></div>
+      <div class="grid-2" id="pipeline"></div>
+      <div class="section-title"><h2>Traffic jobs</h2></div>
+      <div class="card accent">
+        <div class="card-head">
+          <div><h2>Jobs that send requests to the Integration Layer</h2>
+            <div class="sub">Run by il-scheduler. Each request's HTTP status and response are recorded.</div></div>
+          <button class="btn primary" id="new-job" type="button">+ New job</button>
+        </div>
+        <div id="jobs-table"></div>
+      </div>
+      <div class="section-title"><h2>System jobs</h2></div>
+      <div class="card">
+        <div class="card-head"><div><h2>Maintenance jobs</h2><div class="sub">Schedules are stored in the database; il-scheduler checks every 2 s.</div></div></div>
+        <div id="system-jobs-table"></div>
+        <h3 style="margin-top:20px">Recent system job runs</h3>
+        <div id="system-runs-table"></div>
+      </div>
+    </section>
+
+    <!-- PAYLOADS -->
+    <section id="tab-payloads" class="tab-panel" role="tabpanel" hidden>
+      <div class="grid-editor">
+        <div class="card">
+          <div class="card-head"><h2>JSON library</h2><button class="btn sm primary" id="new-sample" type="button">+ New</button></div>
+          <select id="p-filter" aria-label="Filter by workflow" data-workflow-filter style="width:100%;margin-bottom:8px"><option value="">All workflows</option></select>
+          <div class="lib-list" id="sample-list"></div>
+        </div>
+        <div class="grid-2" style="align-items:start">
+          <div class="card accent" id="sample-editor"></div>
+          <div class="card" id="sample-result"><div class="card-head"><h2>Response</h2></div>
+            <p class="muted">Validate or send a payload to see the status code, the response body and the request's progress.</p></div>
         </div>
       </div>
     </section>
@@ -113,7 +135,7 @@
             <option>PENDING</option><option>IN_PROGRESS</option><option>COMPLETED</option>
             <option>FAILED</option><option>CANCELLED</option>
           </select>
-          <select id="r-workflow" aria-label="Workflow filter"><option value="">All workflows</option></select>
+          <select id="r-workflow" aria-label="Workflow filter" data-workflow-filter><option value="">All workflows</option></select>
           <input id="r-search" type="search" placeholder="Search id, correlation id, idempotency key or payload text">
           <span class="muted small" id="r-count"></span>
         </div>
@@ -121,44 +143,51 @@
       </div>
     </section>
 
-    <!-- CALLBACKS -->
-    <section id="tab-callbacks" class="tab-panel" role="tabpanel" hidden>
-      <div class="card">
-        <div class="card-head"><h2>Callbacks received by App1</h2><span class="muted small">latest 100, held in App1 mock memory</span></div>
-        <div id="callbacks-table"></div>
+    <!-- TELEMETRY -->
+    <section id="tab-telemetry" class="tab-panel" role="tabpanel" hidden>
+      <div class="kpis" id="t-services"></div>
+      <div class="section-title"><h2>Stage latency, last 24 hours</h2></div>
+      <div class="kpis" id="t-stages"></div>
+      <div class="grid-32">
+        <div class="card"><div class="card-head"><h2>API endpoints</h2><span class="sub">last 24 hours, from api_call_log</span></div><div id="t-endpoints"></div></div>
+        <div class="card"><div class="card-head"><h2>HTTP status codes</h2><span class="sub">last 24 hours</span></div><div id="t-codes"></div></div>
       </div>
-    </section>
-
-    <!-- API LOG -->
-    <section id="tab-apilog" class="tab-panel" role="tabpanel" hidden>
-      <div class="card">
-        <div class="card-head"><h2>API call log</h2><span class="muted small">integration.api_call_log, latest 100</span></div>
-        <div id="apilog-table"></div>
+      <div class="card accent">
+        <div class="card-head">
+          <div><h2>Live event stream</h2><div class="sub">state changes, HTTP calls and job runs as they happen</div></div>
+          <div class="seg" id="t-kind" role="group" aria-label="Event type">
+            <button data-kind="all" aria-pressed="true">All</button><button data-kind="state">State</button>
+            <button data-kind="http">HTTP</button><button data-kind="job">Jobs</button>
+          </div>
+        </div>
+        <div id="t-stream" class="scroll"></div>
       </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-head"><h2>API calls with responses</h2><span class="sub">latest 40</span></div><div id="t-calls" class="scroll"></div></div>
+        <div class="card"><div class="card-head"><h2>Callbacks received by App1</h2><span class="sub">latest 40</span></div><div id="t-callbacks" class="scroll"></div></div>
+      </div>
+      <div class="card"><div class="card-head"><h2>PostgreSQL</h2></div><div id="t-db"></div></div>
     </section>
 
     <!-- WORKFLOWS -->
     <section id="tab-workflows" class="tab-panel" role="tabpanel" hidden>
-      <div id="workflows"></div>
-    </section>
-
-    <!-- REPORTS -->
-    <section id="tab-reports" class="tab-panel" role="tabpanel" hidden>
-      <div class="card">
-        <div class="card-head"><h2>Daily workflow summary</h2><span class="muted small" id="watermark"></span></div>
-        <p class="muted small">From the data warehouse view <code>dwh.v_daily_workflow_summary</code>. The scheduler loads it every 15 minutes, so it lags the live dashboard.</p>
-        <div id="reports-table"></div>
+      <div class="card accent">
+        <div class="card-head">
+          <div><h2>Workflow registry</h2><div class="sub">JSON Schemas used to validate App1 input and App2 output. Changing a schema bumps its version.</div></div>
+          <button class="btn primary" id="new-workflow" type="button">+ New workflow</button>
+        </div>
       </div>
+      <div id="workflows" class="tab-panel"></div>
     </section>
   </main>
 
-  <!-- Request detail drawer -->
+  <!-- side panel (request details, job details, editors) -->
   <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
   <aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="drawer-title" role="dialog">
     <div class="drawer-head">
       <div>
-        <div class="muted small">Request</div>
-        <h2 id="drawer-title" class="mono"></h2>
+        <div class="muted small" id="drawer-kicker"></div>
+        <h2 id="drawer-title"></h2>
       </div>
       <button class="icon-btn" id="drawer-close" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -170,6 +199,13 @@
   <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
   <div class="toast" id="toast" role="status" hidden></div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/js/core.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/ops.js"></script>
+  <script src="/static/js/analytics.js"></script>
+  <script src="/static/js/jobs.js"></script>
+  <script src="/static/js/payloads.js"></script>
+  <script src="/static/js/telemetry.js"></script>
+  <script src="/static/js/main.js"></script>
 </body>
 </html>

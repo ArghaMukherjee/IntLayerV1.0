@@ -55,9 +55,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/stats", tags=["worker"])
     async def stats(request: Request):
         worker: Worker = request.app.state.worker
-        return {"worker_id": settings.worker_id, "running": worker.running, "started_at": worker.started_at,
+        return {"worker_id": settings.worker_id, "running": worker.running, "paused": worker.paused,
+                "started_at": worker.started_at,
                 "inflight": worker.inflight, "max_concurrency": settings.max_concurrency,
                 "counters": dict(worker.stats), "workflows": sorted(HANDLERS)}
+
+    @app.post("/worker/pause", tags=["worker"])
+    async def pause(request: Request):
+        request.app.state.worker.pause()
+        return {"paused": True, "inflight": request.app.state.worker.inflight}
+
+    @app.post("/worker/resume", tags=["worker"])
+    async def resume(request: Request):
+        request.app.state.worker.resume()
+        return {"paused": False}
 
     return app
 

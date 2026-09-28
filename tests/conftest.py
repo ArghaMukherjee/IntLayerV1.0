@@ -19,7 +19,7 @@ ADMIN_URL = os.getenv("TEST_PG_ADMIN_URL")
 PASSWORD = "test-password"
 # fixture key -> group roles
 TEST_USERS = {"il": ["il_service"], "app2": ["app2_worker"],
-              "scheduler": ["il_scheduler", "dwh_etl"], "bi": ["dwh_reader"]}
+              "scheduler": ["il_scheduler", "dwh_etl"], "bi": ["dwh_reader"], "ui": ["ops_viewer", "console_app"]}
 
 
 @pytest.fixture(scope="session")

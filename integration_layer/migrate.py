@@ -15,13 +15,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 log = logging.getLogger("migrate")
 
-# login user -> group role defined in 001/002
+# login user -> (password setting, group roles defined in db/*.sql)
 LOGIN_USERS = {
-    "il_api": ("il_api_password", "il_service"),
-    "app2": ("app2_password", "app2_worker"),
-    "il_scheduler_user": ("scheduler_password", "il_scheduler"),
-    "bi_reader": ("bi_reader_password", "dwh_reader"),
-    "ui_reader": ("ui_reader_password", "ops_viewer"),
+    "il_api": ("il_api_password", ("il_service",)),
+    "app2": ("app2_password", ("app2_worker",)),
+    "il_scheduler_user": ("scheduler_password", ("il_scheduler",)),
+    "bi_reader": ("bi_reader_password", ("dwh_reader",)),
+    "ui_reader": ("ui_reader_password", ("ops_viewer", "console_app")),
 }
 
 
@@ -61,7 +61,7 @@ def apply_migrations(conn: psycopg.Connection, migrations_dir: Path) -> list[str
 
 
 def ensure_login_users(conn: psycopg.Connection, settings: MigrateSettings) -> None:
-    for user, (password_field, group_role) in LOGIN_USERS.items():
+    for user, (password_field, group_roles) in LOGIN_USERS.items():
         password = getattr(settings, password_field)
         if not password:
             log.info("skipping login user %s (no password configured)", user)
@@ -70,8 +70,9 @@ def ensure_login_users(conn: psycopg.Connection, settings: MigrateSettings) -> N
         verb = "ALTER" if exists else "CREATE"
         conn.execute(sql.SQL(verb + " ROLE {} LOGIN PASSWORD {}").format(
             sql.Identifier(user), sql.Literal(password)))
-        conn.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(group_role), sql.Identifier(user)))
-        log.info("login user %s ready (member of %s)", user, group_role)
+        for role in group_roles:
+            conn.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(role), sql.Identifier(user)))
+        log.info("login user %s ready (member of %s)", user, ", ".join(group_roles))
 
 
 def run(settings: MigrateSettings) -> None:

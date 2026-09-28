@@ -10,6 +10,7 @@ WORKDIR /srv
 COPY ui/requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 
+COPY integration_layer/__init__.py integration_layer/templating.py ./integration_layer/
 COPY ui ./ui
 RUN useradd --system --uid 10001 app
 USER app

@@ -62,6 +62,10 @@ services:
     command: ["python", "-m", "integration_layer.scheduler"]
     environment:
       SCHEDULER_DATABASE_URL: postgresql://il_scheduler_user:${SCHEDULER_DB_PASSWORD}@postgres:5432/integration
+      # traffic jobs call the Integration Layer as App1
+      SCHEDULER_IL_BASE_URL: http://il-api:8000
+      SCHEDULER_IL_API_KEY: ${APP1_API_KEY}
+      SCHEDULER_CALLBACK_URL: http://app1-mock:8002/hooks/il
     depends_on:
       migrate: { condition: service_completed_successfully }
     restart: unless-stopped

@@ -106,7 +106,7 @@ async def api_call_log_middleware(request: Request, call_next):
             request_headers=mask_headers(request.headers),
             request_body_bytes=int(body_bytes) if body_bytes and body_bytes.isdigit() else None,
             response_status_code=status_code,
-            response_body=getattr(request.state, "error_body", None),
+            response_body=getattr(request.state, "error_body", None) or getattr(request.state, "response_body", None),
             latency_ms=int((time.perf_counter() - started) * 1000),
             client_ip=server_info.client_ip(request),
             user_agent=request.headers.get("user-agent"),

@@ -100,8 +100,10 @@ async def submit_request(body: SubmitRequest, request: Request, response: Respon
     response.headers["Location"] = status_url
     if row["is_duplicate"]:
         response.status_code = status.HTTP_200_OK
-    return SubmitResponse(request_id=row["request_id"], correlation_id=row["correlation_id"],
-                          status=row["status"], is_duplicate=row["is_duplicate"], status_url=status_url)
+    result = SubmitResponse(request_id=row["request_id"], correlation_id=row["correlation_id"],
+                            status=row["status"], is_duplicate=row["is_duplicate"], status_url=status_url)
+    request.state.response_body = result.model_dump(mode="json")  # recorded in api_call_log
+    return result
 
 
 @router.get("/{request_id}", response_model=RequestStatus, response_model_exclude_none=False)
