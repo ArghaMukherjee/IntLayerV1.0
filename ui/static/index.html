@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Integration Layer Console</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M8 11h9m-3-4 4 4-4 4M24 21h-9m3 4-4-4 4-4' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><rect width="32" height="32" rx="7"/><path d="M8 11h9m-3-4 4 4-4 4M24 21h-9m3 4-4-4 4-4"/></svg>
+      </span>
+      <div>
+        <div class="brand-title">Integration Layer Console</div>
+        <div class="brand-sub">App1 &rarr; Integration Layer &rarr; PostgreSQL &rarr; App2</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="refresh" id="refresh-state" title="Data refreshes automatically">
+        <span class="pulse" aria-hidden="true"></span><span id="refresh-text">Live</span>
+      </span>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+    <button role="tab" data-tab="send">Send request</button>
+    <button role="tab" data-tab="requests">Requests</button>
+    <button role="tab" data-tab="callbacks">Callbacks</button>
+    <button role="tab" data-tab="apilog">API log</button>
+    <button role="tab" data-tab="workflows">Workflows</button>
+    <button role="tab" data-tab="reports">Reports</button>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab-panel" role="tabpanel">
+      <div class="flow" id="flow"></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Requests received, last 24 hours</h2><span class="muted small">per hour</span></div>
+          <div class="chart" id="hourly-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Requests by status</h2><span class="muted small">all time</span></div>
+          <div id="status-chart"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Latest requests</h2><button class="link-btn" data-goto="requests">View all &rarr;</button></div>
+        <div id="recent-table"></div>
+      </div>
+    </section>
+
+    <!-- SEND -->
+    <section id="tab-send" class="tab-panel" role="tabpanel" hidden>
+      <div class="grid-send">
+        <div class="card">
+          <div class="card-head"><h2>Send a request as App1</h2></div>
+          <p class="muted small">The console posts to the Integration Layer API server-side using App1's API key.
+            The payload is validated against the workflow's JSON Schema before it is stored.</p>
+          <form id="send-form" autocomplete="off">
+            <div class="form-row">
+              <label for="f-workflow">Workflow</label>
+              <select id="f-workflow" required></select>
+            </div>
+            <div class="form-row">
+              <span class="label">Sample payloads</span>
+              <div class="chips" id="samples"></div>
+            </div>
+            <div class="form-row">
+              <label for="f-payload">Payload (JSON)</label>
+              <textarea id="f-payload" rows="16" spellcheck="false"></textarea>
+              <div class="field-error" id="payload-error" hidden></div>
+            </div>
+            <div class="form-inline">
+              <div class="form-row grow">
+                <label for="f-idem">Idempotency key <span class="muted">(optional)</span></label>
+                <input id="f-idem" type="text" maxlength="200" placeholder="e.g. ORD-1001">
+              </div>
+              <div class="form-row">
+                <label for="f-priority">Priority</label>
+                <select id="f-priority"><option>0</option><option>1</option><option>5</option><option>9</option></select>
+              </div>
+            </div>
+            <label class="check"><input id="f-callback" type="checkbox" checked> Deliver the result to App1 by callback (polling always works)</label>
+            <div class="actions">
+              <button class="btn primary" type="submit" id="send-btn">Send request</button>
+              <button class="btn" type="button" id="format-btn">Format JSON</button>
+            </div>
+          </form>
+        </div>
+        <div class="card" id="send-result-card">
+          <div class="card-head"><h2>Result</h2></div>
+          <div id="send-result"><p class="muted">Send a request to see the response and follow it through the pipeline.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REQUESTS -->
+    <section id="tab-requests" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <div class="filters">
+          <select id="r-status" aria-label="Status filter">
+            <option value="">All statuses</option>
+            <option>PENDING</option><option>IN_PROGRESS</option><option>COMPLETED</option>
+            <option>FAILED</option><option>CANCELLED</option>
+          </select>
+          <select id="r-workflow" aria-label="Workflow filter"><option value="">All workflows</option></select>
+          <input id="r-search" type="search" placeholder="Search id, correlation id, idempotency key or payload text">
+          <span class="muted small" id="r-count"></span>
+        </div>
+        <div id="requests-table"></div>
+      </div>
+    </section>
+
+    <!-- CALLBACKS -->
+    <section id="tab-callbacks" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <div class="card-head"><h2>Callbacks received by App1</h2><span class="muted small">latest 100, held in App1 mock memory</span></div>
+        <div id="callbacks-table"></div>
+      </div>
+    </section>
+
+    <!-- API LOG -->
+    <section id="tab-apilog" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <div class="card-head"><h2>API call log</h2><span class="muted small">integration.api_call_log, latest 100</span></div>
+        <div id="apilog-table"></div>
+      </div>
+    </section>
+
+    <!-- WORKFLOWS -->
+    <section id="tab-workflows" class="tab-panel" role="tabpanel" hidden>
+      <div id="workflows"></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="tab-reports" class="tab-panel" role="tabpanel" hidden>
+      <div class="card">
+        <div class="card-head"><h2>Daily workflow summary</h2><span class="muted small" id="watermark"></span></div>
+        <p class="muted small">From the data warehouse view <code>dwh.v_daily_workflow_summary</code>. The scheduler loads it every 15 minutes, so it lags the live dashboard.</p>
+        <div id="reports-table"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Request detail drawer -->
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="drawer-title" role="dialog">
+    <div class="drawer-head">
+      <div>
+        <div class="muted small">Request</div>
+        <h2 id="drawer-title" class="mono"></h2>
+      </div>
+      <button class="icon-btn" id="drawer-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+
+  <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

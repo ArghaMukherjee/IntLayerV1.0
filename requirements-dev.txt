@@ -1,0 +1,4 @@
+-r integration_layer/requirements.txt
+-r app2/requirements.txt
+-r app1_mock/requirements.txt
+pytest==9.1.1
